@@ -22,11 +22,10 @@ export const App = () => {
             </TabList>
 
             <TabPanel>
-              <Gallery />
-            </TabPanel>
-
-            <TabPanel>
               <Todos />
+            </TabPanel>
+            <TabPanel>
+              <Gallery />
             </TabPanel>
           </Tabs>
         </Container>
