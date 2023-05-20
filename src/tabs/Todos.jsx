@@ -37,7 +37,6 @@ export const Todos = () => {
   return (
     <>
       <SearchForm onSubmit={createTodo} />
-
       <Grid>
         {todos.map(({ id, text, description }) => {
           return (
