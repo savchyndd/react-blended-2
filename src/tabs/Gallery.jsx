@@ -1,6 +1,6 @@
-import { Component } from 'react';
+import { useEffect, useState } from 'react';
 
-import * as ImageService from 'service/image-service';
+import { getImages } from 'service/image-service';
 
 import {
   Button,
@@ -12,84 +12,75 @@ import {
   Loader,
   Modal,
 } from 'components';
-import { getImages } from 'service/image-service';
 
-export class Gallery extends Component {
-  state = {
-    query: '',
-    page: 1,
-    list: [],
-    showLoadMore: false,
-    isEmpti: false,
-    isLoading: false,
-    largeImage: '',
-  };
+export const Gallery = () => {
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [list, setList] = useState([]);
+  const [showLoadMore, setShowLoadMore] = useState(false);
+  const [isEmpty, setIsEmpty] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [largeImage, setLargeImage] = useState('');
 
-  componentDidUpdate(prevProps, prevState, snapshot) {
-    const { query, page } = this.state;
+  useEffect(() => {
+    if (query === '') return;
 
-    if (prevState.query !== query || prevState.page !== page) {
-      this.setState({ isLoading: true });
+    const fetchGallery = () => {
+      setIsLoading(true);
+
       getImages(query, page)
         .then(({ photos, total_results }) => {
           if (!photos.length) {
-            this.setState({ isEmpti: true });
+            setIsEmpty(true);
+            setList([]);
+            setShowLoadMore(page < Math.ceil(total_results / 15));
             return;
           }
-          this.setState(({ list }) => ({
-            list: [...list, ...photos],
-            showLoadMore: page < Math.ceil(total_results / 15),
-            // showLoadMore: photos.length > 0 && total_results > page * 15,
-          }));
+          setList(prevList => [...prevList, ...photos]);
+          setShowLoadMore(page < Math.ceil(total_results / 15));
         })
-        .finally(() => this.setState({ isLoading: false }));
-    }
-  }
+        .finally(() => setIsLoading(false));
+    };
 
-  handleSubmit = query => {
-    this.setState({
-      query,
-    });
+    fetchGallery();
+  }, [query, page]);
+
+  const handleSubmit = query => {
+    setIsEmpty(false);
+    setList([]);
+
+    setQuery(query);
   };
 
-  handleLoadMore = () => {
-    this.setState(prevState => ({ page: prevState.page + 1 }));
+  const handleLoadMore = () => {
+    setPage(prevPage => prevPage + 1);
   };
 
-  showModal = url => {
-    this.setState({ largeImage: url });
-  };
+  const showModal = url => setLargeImage(url);
 
-  render() {
-    const { list, showLoadMore, isEmpti, isLoading, largeImage } = this.state;
-    return (
-      <>
-        <SearchForm onSubmit={this.handleSubmit} />
-        <Grid>
-          {list.map(({ id, alt, src, avg_color }) => (
-            <GridItem key={id}>
-              <CardItem color={avg_color}>
-                <img
-                  src={src.large}
-                  alt={alt}
-                  onClick={() => this.showModal(src.large)}
-                />
-              </CardItem>
-            </GridItem>
-          ))}
-        </Grid>
-        {showLoadMore && (
-          <Button onClick={this.handleLoadMore}>Load more</Button>
-        )}
-        {isEmpti && (
-          <Text textAlign="center">Sorry. There are no images ... 😭</Text>
-        )}
-        {isLoading && <Loader />}
+  return (
+    <>
+      <SearchForm onSubmit={handleSubmit} />
+      <Grid>
+        {list.map(({ id, alt, src, avg_color }) => (
+          <GridItem key={id}>
+            <CardItem color={avg_color}>
+              <img
+                src={src.large}
+                alt={alt}
+                onClick={() => showModal(src.large)}
+              />
+            </CardItem>
+          </GridItem>
+        ))}
+      </Grid>
+      {showLoadMore && <Button onClick={handleLoadMore}>Load more</Button>}
+      {isEmpty && (
+        <Text textAlign="center">Sorry. There are no images ... 😭</Text>
+      )}
+      {isLoading && <Loader />}
 
-        {largeImage && (
-          <Modal onClose={this.showModal} largeImage={largeImage} />
-        )}
-      </>
-    );
-  }
-}
+      {largeImage && <Modal onClose={showModal} largeImage={largeImage} />}
+    </>
+  );
+};
